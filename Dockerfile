@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-LABEL org.opencontainers.image.source=https://github.com/fragoi/debuild
+LABEL org.opencontainers.image.source=https://github.com/fragoi/debuild-docker
 LABEL org.opencontainers.image.description="Build debian packages"
 LABEL org.opencontainers.image.licenses="MIT"
 
