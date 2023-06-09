@@ -1,0 +1,2 @@
+Acquire::Retries "3";
+Acquire::http::Timeout "10";
