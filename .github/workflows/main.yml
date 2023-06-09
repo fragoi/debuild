@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  GIT_USER_NAME: FraBot
+  GIT_USER_NAME: Fra Bot
   GIT_USER_EMAIL: fragoibot@gmail.com
   V_PATCH: 1
 
