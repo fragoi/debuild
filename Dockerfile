@@ -1,5 +1,9 @@
 FROM ubuntu:20.04
 
+LABEL org.opencontainers.image.source=https://github.com/fragoi/debuild
+LABEL org.opencontainers.image.description="Build debian packages"
+LABEL org.opencontainers.image.licenses="MIT"
+
 COPY apt_conf_http /etc/apt/apt.conf.d/
 
 RUN export DEBIAN_FRONTEND=noninteractive \

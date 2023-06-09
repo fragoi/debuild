@@ -1,0 +1,32 @@
+name: Build and publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  GIT_USER_NAME: Fra Bot
+  GIT_USER_EMAIL: fragoibot@gmail.com
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: fragoi/bash-actions@main
+      - name: Create release
+        run: |
+          source bash-functions
+          createRelease
+      - name: Build image
+        run: |
+          source bash-functions
+          docker build -t ghcr.io/fragoi/debuild:$(getVersion) .
+      - name: Push image
+        run: |
+          source bash-functions
+          docker push ghcr.io/fragoi/debuild:$(getVersion)
