@@ -7,7 +7,7 @@ readline() {
 field=$1
 
 begin_line="^${field}[[:space:]]*:.*"
-comment_line="^#.*"
+comment_line="^[[:space:]]*#.*"
 end_line="^[[:graph:]].*"
 
 while readline line; do
