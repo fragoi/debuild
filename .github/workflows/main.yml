@@ -33,7 +33,7 @@ jobs:
 
       - name: Login to registry
         run: |
-          docker login \
+          docker login ghcr.io \
             --username "$GIT_USER_NAME" \
             --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
 
