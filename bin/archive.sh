@@ -6,24 +6,32 @@ warn() {
   echo 1>&2 "$@"
 }
 
+checkNamerefs() {
+  local name
+  for name in "$@"; do
+    if [[ "$name" = _* ]]; then
+      warn "Nameref cannot start with underscore ($1)"
+      return 1
+    fi
+  done
+}
+
 findOne() {
-  local -n var=$1
-  local suffix=$2
+  local suffix=$1
   local file=($(ls -d *${suffix} 2> /dev/null || true))
   if (( ${#file[@]} != 1 )); then
     warn "Found ${#file[@]} files (${suffix})"
     return 1
   fi
-  var=$file
+  echo $file
 }
 
 origName() {
-  local -n var=$1
-  local archive=$2
+  local archive=$1
 
   ## name looks good already
   if [[ "$archive" =~ .*".orig.${SUFFIX}" ]]; then
-    var="$archive"
+    echo "$archive"
     return 0
   fi
 
@@ -35,15 +43,11 @@ origName() {
   local name=${BASH_REMATCH[1]}
   local version=${BASH_REMATCH[2]}
 
-  echo "Name: ${name}"
-  echo "Version: ${version}"
-
-  var="${name}_${version}.orig.${SUFFIX}"
+  echo "${name}_${version}.orig.${SUFFIX}"
 }
 
 dirName() {
-  local -n var=$1
-  local archive=$2
+  local archive=$1
 
   if ! [[ "$archive" =~ (.*)_(.*)".orig.${SUFFIX}" ]]; then
     warn "${archive} does not match pattern"
@@ -53,35 +57,37 @@ dirName() {
   local name=${BASH_REMATCH[1]}
   local version=${BASH_REMATCH[2]}
 
-  var="${name}-${version}"
+  echo "${name}-${version}"
 }
 
 prepare() {
-  local -n orig=$1
-  local -n dir=$2
+  checkNamerefs "$1" "$2" || return 1
+
+  local -n _orig=$1
+  local -n _dir=$2
 
   echo "Looking for orig archive..."
-  if ! findOne orig ".orig.${SUFFIX}"; then
-    local archive
+  if ! _orig=$(findOne ".orig.${SUFFIX}"); then
+    local _archive
 
     echo "Orig archive not found, looking for upstream archive..."
-    if ! findOne archive ".${SUFFIX}"; then
+    if ! _archive=$(findOne ".${SUFFIX}"); then
       echo "Upstream archive not found, abort."
       return 1
     fi
 
-    echo "Found upstream archive ${archive}"
-    origName orig "$archive"
+    echo "Found upstream archive ${_archive}"
+    _orig=$(origName "$_archive")
 
-    echo "Rename archive as ${orig}"
-    mv "$archive" "$orig"
+    echo "Rename archive as ${_orig}"
+    mv "$_archive" "$_orig"
   fi
 
-  echo "Found orig archive ${orig}"
-  dirName dir "$orig"
+  echo "Found orig archive ${_orig}"
+  _dir=$(dirName "$_orig")
 
-  if ! [ -d "$dir" ]; then
+  if ! [ -d "$_dir" ]; then
     echo "Extracting orig archive"
-    tar -xf "$orig"
+    tar -xf "$_orig"
   fi
 }
