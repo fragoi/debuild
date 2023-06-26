@@ -90,4 +90,9 @@ prepare() {
     echo "Extracting orig archive"
     tar -xf "$_orig"
   fi
+
+  if [ -d "debian" ] && ! [ -d "${_dir}/debian" ]; then
+    echo "Copying debian directory"
+    cp -r debian "$_dir"
+  fi
 }
