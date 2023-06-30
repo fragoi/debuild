@@ -26,27 +26,18 @@ findOne() {
   echo $file
 }
 
-origName() {
+archiveDirName() {
   local archive=$1
 
-  ## name looks good already
-  if [[ "$archive" =~ .*".orig.${SUFFIX}" ]]; then
-    echo "$archive"
-    return 0
-  fi
-
-  if ! [[ "$archive" =~ (.*)-(.*)".${SUFFIX}" ]]; then
+  if ! [[ "$archive" =~ (.*)".${SUFFIX}" ]]; then
     warn "${archive} does not match pattern"
     return 1
   fi
 
-  local name=${BASH_REMATCH[1]}
-  local version=${BASH_REMATCH[2]}
-
-  echo "${name}_${version}.orig.${SUFFIX}"
+  echo "${BASH_REMATCH[1]}"
 }
 
-dirName() {
+origDirName() {
   local archive=$1
 
   if ! [[ "$archive" =~ (.*)_(.*)".orig.${SUFFIX}" ]]; then
@@ -60,39 +51,49 @@ dirName() {
   echo "${name}-${version}"
 }
 
+origNameFromChangelog() {
+  local changelog=$1
+  local tokens=($(head -1 "$changelog"))
+  local name=${tokens[0]}
+  local version=${tokens[1]:1:-1}
+  ## Strip debian revision
+  version=${version%-*}
+  echo "${name}_${version}.orig.${SUFFIX}"
+}
+
 prepare() {
   checkNamerefs "$1" "$2" || return 1
 
   local -n _orig=$1
   local -n _dir=$2
+  local _archive
 
-  echo "Looking for orig archive..."
-  if ! _orig=$(findOne ".orig.${SUFFIX}"); then
-    local _archive
-
-    echo "Orig archive not found, looking for upstream archive..."
-    if ! _archive=$(findOne ".${SUFFIX}"); then
-      echo "Upstream archive not found, abort."
-      return 1
-    fi
-
-    echo "Found upstream archive ${_archive}"
-    _orig=$(origName "$_archive")
-
-    echo "Rename archive as ${_orig}"
-    mv "$_archive" "$_orig"
+  echo "Looking for upstream archive..."
+  if _archive=$(findOne ".orig.${SUFFIX}"); then
+    echo "Found orig archive ${_archive}"
+    _dir=$(origDirName "$_archive")
+    _orig=$_archive
+  elif _archive=$(findOne ".${SUFFIX}"); then
+    echo "Found archive ${_archive}"
+    _dir=$(archiveDirName "$_archive")
+  else
+    echo "Upstream archive not found, abort."
+    return 1
   fi
 
-  echo "Found orig archive ${_orig}"
-  _dir=$(dirName "$_orig")
-
   if ! [ -d "$_dir" ]; then
-    echo "Extracting orig archive"
-    tar -xf "$_orig"
+    echo "Extracting archive"
+    tar -xf "$_archive"
   fi
 
   if [ -d "debian" ] && ! [ -d "${_dir}/debian" ]; then
     echo "Copying debian directory"
     cp -r debian "$_dir"
+  fi
+
+  if ! [ "$_orig" ]; then
+    _orig=$(origNameFromChangelog "${_dir}/debian/changelog")
+    echo "Rename archive as ${_orig}"
+    mv "$_archive" "$_orig"
   fi
 }
