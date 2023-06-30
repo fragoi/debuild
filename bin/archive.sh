@@ -1,5 +1,6 @@
 #!/bin/bash
 
+NAME_PATTERN=${DEBPACKAGE:-.*}
 SUFFIX="tar.gz"
 
 warn() {
@@ -35,7 +36,7 @@ origName() {
     return 0
   fi
 
-  if ! [[ "$archive" =~ (.*)-(.*)".${SUFFIX}" ]]; then
+  if ! [[ "$archive" =~ ($NAME_PATTERN)-(.*)".${SUFFIX}" ]]; then
     warn "${archive} does not match pattern"
     return 1
   fi
@@ -49,7 +50,7 @@ origName() {
 dirName() {
   local archive=$1
 
-  if ! [[ "$archive" =~ (.*)_(.*)".orig.${SUFFIX}" ]]; then
+  if ! [[ "$archive" =~ ($NAME_PATTERN)_(.*)".orig.${SUFFIX}" ]]; then
     warn "${archive} does not match pattern"
     return 1
   fi
