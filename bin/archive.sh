@@ -11,7 +11,7 @@ checkNamerefs() {
   local name
   for name in "$@"; do
     if [[ "$name" = _* ]]; then
-      warn "Nameref cannot start with underscore ($1)"
+      warn "Nameref cannot start with underscore (${name})"
       return 1
     fi
   done
