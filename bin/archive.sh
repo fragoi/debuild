@@ -1,7 +1,7 @@
 #!/bin/bash
 
-NAME_PATTERN=${DEBPACKAGE:-.*}
-SUFFIX="tar.gz"
+NAME_PATTERN=${DEBPACKAGE:-'.*'}
+SUFFIX='tar.gz'
 
 warn() {
   echo 1>&2 "$@"
@@ -9,7 +9,7 @@ warn() {
 
 checkNamerefs() {
   local name
-  for name in "$@"; do
+  for name; do
     if [[ "$name" = _* ]]; then
       warn "Nameref cannot start with underscore (${name})"
       return 1
@@ -27,73 +27,82 @@ findOne() {
   echo $file
 }
 
-origName() {
+origDirName() {
   local archive=$1
+  [[ "$archive" =~ ($NAME_PATTERN)_(.*)".orig.${SUFFIX}" ]] || return 1
+  local name=${BASH_REMATCH[1]}
+  local version=${BASH_REMATCH[2]}
+  echo "${name}-${version}"
+}
 
-  ## name looks good already
-  if [[ "$archive" =~ .*".orig.${SUFFIX}" ]]; then
-    echo "$archive"
+archiveDirName() {
+  local archive=$1
+  [[ "$archive" = *".${SUFFIX}" ]] || return 1
+  echo "${archive%".${SUFFIX}"}"
+}
+
+ensureDebian() {
+  local dir=$1
+
+  if [ -d "${dir}/debian" ]; then
     return 0
   fi
 
-  if ! [[ "$archive" =~ ($NAME_PATTERN)-(.*)".${SUFFIX}" ]]; then
-    warn "${archive} does not match pattern"
-    return 1
+  if [ -d "debian" ]; then
+    echo "Copying debian directory from current directory"
+    cp -a debian "$dir"
+    return 0
   fi
 
-  local name=${BASH_REMATCH[1]}
-  local version=${BASH_REMATCH[2]}
+  local archive
+  if archive=$(findOne ".debian.${SUFFIX}"); then
+    echo "Found debian archive, extracting..."
+    tar --one-top-level -xf "$archive"
 
-  echo "${name}_${version}.orig.${SUFFIX}"
-}
-
-dirName() {
-  local archive=$1
-
-  if ! [[ "$archive" =~ ($NAME_PATTERN)_(.*)".orig.${SUFFIX}" ]]; then
-    warn "${archive} does not match pattern"
-    return 1
+    local archiveDir=$(archiveDirName "$archive")
+    local debdir=$(find "$archiveDir" -maxdepth 2 -type d -name "debian")
+    if [ "$debdir" ]; then
+      echo "Copying debian directory from archive"
+      cp -a "$debdir" "$dir"
+      return 0
+    else
+      warn "Cannot find debian directory in archive"
+    fi
   fi
 
-  local name=${BASH_REMATCH[1]}
-  local version=${BASH_REMATCH[2]}
-
-  echo "${name}-${version}"
+  return 1
 }
 
 prepare() {
   checkNamerefs "$1" "$2" || return 1
 
-  local -n _orig=$1
+  local -n _arc=$1
   local -n _dir=$2
 
-  echo "Looking for orig archive..."
-  if ! _orig=$(findOne ".orig.${SUFFIX}"); then
-    local _archive
+  echo "Looking for archive..."
+  _arc=$(findOne ".orig.${SUFFIX}" || findOne ".${SUFFIX}") || {
+    echo "Archive not found, abort."
+    return 1
+  }
 
-    echo "Orig archive not found, looking for upstream archive..."
-    if ! _archive=$(findOne ".${SUFFIX}"); then
-      echo "Upstream archive not found, abort."
-      return 1
-    fi
-
-    echo "Found upstream archive ${_archive}"
-    _orig=$(origName "$_archive")
-
-    echo "Rename archive as ${_orig}"
-    mv "$_archive" "$_orig"
-  fi
-
-  echo "Found orig archive ${_orig}"
-  _dir=$(dirName "$_orig")
+  echo "Found archive ${_arc}"
+  _dir=$(origDirName "$_arc" || archiveDirName "$_arc") || {
+    echo "Cannot guess directory name from archive, abort."
+    return 1
+  }
 
   if ! [ -d "$_dir" ]; then
-    echo "Extracting orig archive"
-    tar -xf "$_orig"
+    echo "Extracting archive"
+    tar -xf "$_arc"
+
+    if ! [ -d "$_dir" ]; then
+      echo "Archive does not contain expected directory ${$_dir}, abort."
+      return 1
+    fi
   fi
 
-  if [ -d "debian" ] && ! [ -d "${_dir}/debian" ]; then
-    echo "Copying debian directory"
-    cp -r debian "$_dir"
-  fi
+  ensureDebian "$_dir" || {
+    echo "Cannot find debian directory, abort."
+    return 1
+  }
 }
