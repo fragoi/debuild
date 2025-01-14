@@ -1,4 +1,5 @@
 #!/bin/bash -e
+set -o pipefail
 
 control=$1
 ## Empty (source), -Arch, -Indep
