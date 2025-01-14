@@ -96,7 +96,7 @@ prepare() {
     tar -xf "$_arc"
 
     if ! [ -d "$_dir" ]; then
-      echo "Archive does not contain expected directory ${$_dir}, abort."
+      echo "Archive does not contain expected directory ${_dir}, abort."
       return 1
     fi
   fi
