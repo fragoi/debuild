@@ -13,6 +13,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         build-essential \
         devscripts \
         openssh-client \
+        dput \
     && rm -rf /var/lib/apt
 
 COPY bin/* /usr/local/bin/
